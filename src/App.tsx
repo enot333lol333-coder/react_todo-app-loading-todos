@@ -1,44 +1,51 @@
 /* eslint-disable jsx-a11y/label-has-associated-control */
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import classNames from 'classnames';
 import { UserWarning } from './UserWarning';
 import { USER_ID, getTodos } from './api/todos';
 import { Todo } from './types/Todo';
 
-type FilterStatus = 'all' | 'active' | 'completed';
+export enum FilterStatus {
+  All = 'all',
+  Active = 'active',
+  Completed = 'completed',
+}
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const [filter, setFilter] = useState<FilterStatus>('all');
+  const [filter, setFilter] = useState<FilterStatus>(FilterStatus.All);
+
+  const showErrorMessage = (message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(''), 3000);
+  };
 
   useEffect(() => {
     getTodos()
-      .then(fetchedTodos => {
-        setTodos(fetchedTodos);
-      })
+      .then(setTodos)
       .catch(() => {
-        setErrorMessage('Unable to load todos');
-        setTimeout(() => setErrorMessage(''), 3000);
+        showErrorMessage('Unable to load todos');
       });
   }, []);
+
+  const visibleTodos = useMemo(() => {
+    return todos.filter(todo => {
+      switch (filter) {
+        case FilterStatus.Active:
+          return !todo.completed;
+        case FilterStatus.Completed:
+          return todo.completed;
+        default:
+          return true;
+      }
+    });
+  }, [todos, filter]);
 
   if (!USER_ID) {
     return <UserWarning />;
   }
-
-  const visibleTodos = todos.filter(todo => {
-    if (filter === 'active') {
-      return !todo.completed;
-    }
-
-    if (filter === 'completed') {
-      return todo.completed;
-    }
-
-    return true;
-  });
 
   return (
     <div className="todoapp">
@@ -95,7 +102,10 @@ export const App: React.FC = () => {
                   </button>
 
                   <div data-cy="TodoLoader" className="modal overlay">
-                    <div className="modal-background has-background-white-ter" />
+                    <div
+                      className="modal-background
+                       has-background-white-ter"
+                    />
                     <div className="loader" />
                   </div>
                 </div>
@@ -111,10 +121,10 @@ export const App: React.FC = () => {
                 <a
                   href="#/"
                   className={classNames('filter__link', {
-                    selected: filter === 'all',
+                    selected: filter === FilterStatus.All,
                   })}
                   data-cy="FilterLinkAll"
-                  onClick={() => setFilter('all')}
+                  onClick={() => setFilter(FilterStatus.All)}
                 >
                   All
                 </a>
@@ -122,10 +132,10 @@ export const App: React.FC = () => {
                 <a
                   href="#/active"
                   className={classNames('filter__link', {
-                    selected: filter === 'active',
+                    selected: filter === FilterStatus.Active,
                   })}
                   data-cy="FilterLinkActive"
-                  onClick={() => setFilter('active')}
+                  onClick={() => setFilter(FilterStatus.Active)}
                 >
                   Active
                 </a>
@@ -133,10 +143,10 @@ export const App: React.FC = () => {
                 <a
                   href="#/completed"
                   className={classNames('filter__link', {
-                    selected: filter === 'completed',
+                    selected: filter === FilterStatus.Completed,
                   })}
                   data-cy="FilterLinkCompleted"
-                  onClick={() => setFilter('completed')}
+                  onClick={() => setFilter(FilterStatus.Completed)}
                 >
                   Completed
                 </a>
